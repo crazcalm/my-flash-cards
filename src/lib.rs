@@ -14,7 +14,7 @@ pub enum FlashCardState {
     Hint,
 }
 
-pub trait FlashCard<'de>: serde::Deserialize<'de> {
+pub trait FlashCard<'de>: serde::Deserialize<'de> + Display {
     fn get_front(&self) -> &str;
     fn get_back(&self) -> &str;
     fn get_hint(&self) -> &str;
@@ -26,11 +26,10 @@ pub trait FlipFlashCard: for<'de> FlashCard<'de> {
     fn flip(&mut self) -> &FlashCardState;
 }
 
-pub trait FlashCards<T>
+pub trait FlashCards<T>: Display
 where
     T: for<'de> FlashCard<'de>,
 {
-    fn new() -> Self;
     fn shuffle(&mut self);
     fn draw(&mut self) -> Option<T>;
     fn add_card(&mut self, new_card: T);
@@ -106,13 +105,33 @@ where
     data: Vec<T>,
 }
 
-impl<T> FlashCards<T> for Cards<T>
+impl<T> Cards<T>
 where
     T: for<'de> FlashCard<'de>,
 {
     fn new() -> Self {
         Cards { data: Vec::new() }
     }
+}
+
+impl<T> Display for Cards<T>
+where
+    T: for<'de> FlashCard<'de>,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        //TODO: Figure out how to use Vec.join (needs to be implemented)
+        for card in &self.data {
+            writeln!(f, "{},", card)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl<T> FlashCards<T> for Cards<T>
+where
+    T: for<'de> FlashCard<'de>,
+{
     fn shuffle(&mut self) {
         let mut rng = thread_rng();
         self.data.shuffle(&mut rng);
@@ -143,18 +162,27 @@ where
     }
 }
 
-fn csv_reader<T: for<'de> FlashCard<'de>>(
-    reader: impl std::io::Read,
-) -> Result<impl FlashCards<T>, Error> {
-    let mut rdr = csv::Reader::from_reader(reader);
-    let mut cards: Cards<T> = FlashCards::new();
+pub trait Loader<T: for<'de> FlashCard<'de>> {
+    fn load(reader: impl std::io::Read) -> Result<Box<dyn FlashCards<T>>, Error>;
+}
 
-    for result in rdr.deserialize() {
-        let record: T = result?;
-        cards.add_card(record);
+struct CSV {}
+
+impl<T> Loader<T> for CSV
+where
+    T: for<'de> FlashCard<'de> + 'static,
+{
+    fn load(reader: impl std::io::Read) -> Result<Box<dyn FlashCards<T>>, Error> {
+        let mut rdr = csv::Reader::from_reader(reader);
+        let mut cards: Cards<T> = Cards::new();
+
+        for result in rdr.deserialize() {
+            let record: T = result?;
+            cards.add_card(record);
+        }
+
+        Ok(Box::new(cards))
     }
-
-    Ok(cards)
 }
 
 #[cfg(test)]
@@ -180,7 +208,9 @@ front,back,hint,
 front_1,back_1,hint_1,
 front_2,back_2,hint_2,
 ";
-        let mut result = csv_reader(data.as_bytes()).unwrap();
+        //let mut result = csv_reader(data.as_bytes()).unwrap();
+        let mut result = CSV::load(data.as_bytes()).unwrap();
+
         let card_2: Card = result.draw().unwrap();
         let card_1: Card = result.draw().unwrap();
 
@@ -207,20 +237,35 @@ front_2,back_2,hint_2,
 
     #[test]
     fn test_flashcards_shuffle() {
-        // Shuffle the first deck
-        let mut cards_1 = create_test_cards();
-        cards_1.shuffle();
-
-        // Do not shuffle the second deck
-        let mut cards_2 = create_test_cards();
-
         let mut found_difference = false;
-        for _ in 0..10 {
-            let card_from_deck_1 = cards_1.draw().unwrap();
-            let card_from_deck_2 = cards_2.draw().unwrap();
 
-            if format!("{}", card_from_deck_1).eq(&format!("{}", card_from_deck_2)) {
-                found_difference = true;
+        // The outer for loop is just in case the shuffle order is the same as the orginal order.
+        // In that case, try again.
+        for _ in 0..10 {
+            // Shuffle the first deck
+            let mut cards_1 = create_test_cards();
+            cards_1.shuffle();
+
+            // Do not shuffle the second deck
+            let mut cards_2 = create_test_cards();
+
+            println!("cards_1: {}", cards_1);
+            println!("cards_2: {}", cards_2);
+
+            for _ in 0..10 {
+                let card_from_deck_1 = cards_1.draw().unwrap();
+                let card_from_deck_2 = cards_2.draw().unwrap();
+
+                println!("cards_1 draw: {}", card_from_deck_1);
+                println!("cards_2 draw: {}", card_from_deck_2);
+
+                if !format!("{}", card_from_deck_1).eq(&format!("{}", card_from_deck_2)) {
+                    found_difference = true;
+                    break;
+                }
+            }
+
+            if found_difference {
                 break;
             }
         }
