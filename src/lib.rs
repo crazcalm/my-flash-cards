@@ -208,7 +208,6 @@ front,back,hint,
 front_1,back_1,hint_1,
 front_2,back_2,hint_2,
 ";
-        //let mut result = csv_reader(data.as_bytes()).unwrap();
         let mut result = CSV::load(data.as_bytes()).unwrap();
 
         let card_2: Card = result.draw().unwrap();
