@@ -2,9 +2,9 @@ use std::io::Error;
 
 use crate::{Loader, FlashCard, FlashCards, Cards};
 
-pub struct CSV {}
+pub struct Csv {}
 
-impl<T> Loader<T> for CSV
+impl<T> Loader<T> for Csv
 where
     T: for<'de> FlashCard<'de> + 'static,
 {
@@ -34,7 +34,7 @@ front_1,back_1,hint_1,
 front_2,back_2,hint_2,
 frint_3,back_3,,
 ";
-        let mut result = CSV::load(data.as_bytes()).unwrap();
+        let mut result = Csv::load(data.as_bytes()).unwrap();
 
         let card_3: Card = result.draw().unwrap();
         let card_2: Card = result.draw().unwrap();
