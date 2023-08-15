@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use serde::Deserialize;
 
-use crate::{FlashCard, FlipFlashCard, FlashCardState};
+use crate::{FlashCard, FlashCardState, FlipFlashCard};
 
 #[derive(Deserialize, Debug)]
 pub struct Card {
@@ -35,16 +35,17 @@ impl Display for Card {
 }
 
 impl FlashCard<'_> for Card {
-    fn get_front(&self) -> &str {
-        &self.front
+    fn get_front(&self) -> String {
+        self.front.to_string()
     }
-    fn get_back(&self) -> &str {
-        &self.back
+    fn get_back(&self) -> String {
+        self.back.to_string()
     }
-    fn get_hint(&self) -> &str {
+    fn get_hint(&self) -> String {
+        //TODO: return an option
         match &self.hint {
-            Some(hint) => &hint,
-            None => "No Hint Found",
+            Some(hint) => hint.to_string(),
+            None => "No Hint Found".to_string(),
         }
     }
 }
@@ -73,7 +74,7 @@ impl FlipFlashCard for Card {
 mod tests {
     use super::*;
 
-   #[test]
+    #[test]
     fn test_new_card() {
         let front = "front".to_string();
         let back = "back".to_string();
@@ -81,9 +82,9 @@ mod tests {
 
         let card = Card::new(front.clone(), back.clone(), hint.clone());
 
-        assert_eq!(card.get_front(), &front);
-        assert_eq!(card.get_back(), &back);
-        assert_eq!(card.get_hint(), &hint);
+        assert_eq!(card.get_front(), front);
+        assert_eq!(card.get_back(), back);
+        assert_eq!(card.get_hint(), hint);
         assert_eq!(card.get_state(), &FlashCardState::Front);
     }
 

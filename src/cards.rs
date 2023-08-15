@@ -1,8 +1,8 @@
+use std::collections::VecDeque;
 use std::fmt::Display;
 use std::iter::FromIterator;
 
-use rand::seq::SliceRandom;
-use rand::thread_rng;
+use rand::{thread_rng, Rng};
 
 use crate::{FlashCard, FlashCards};
 
@@ -11,7 +11,7 @@ pub struct Cards<T>
 where
     T: for<'de> FlashCard<'de>,
 {
-    data: Vec<T>,
+    data: VecDeque<T>,
 }
 
 impl<T> Cards<T>
@@ -19,7 +19,9 @@ where
     T: for<'de> FlashCard<'de>,
 {
     pub fn new() -> Self {
-        Cards { data: Vec::new() }
+        Cards {
+            data: VecDeque::new(),
+        }
     }
 }
 
@@ -49,18 +51,28 @@ where
 {
     fn shuffle(&mut self) {
         let mut rng = thread_rng();
-        self.data.shuffle(&mut rng);
+        let total_num_of_cards = self.data.len();
+
+        for _ in 0..total_num_of_cards {
+            let rand_num_1 = rng.gen_range(0..total_num_of_cards);
+            let rand_num_2 = rng.gen_range(0..total_num_of_cards);
+
+            self.data.swap(rand_num_1, rand_num_2);
+        }
     }
 
     fn deck_size(&self) -> usize {
         self.data.len()
     }
     fn draw(&mut self) -> Option<T> {
-        self.data.pop()
+        self.data.pop_front()
     }
 
     fn add_card(&mut self, new_card: T) {
-        self.data.push(new_card);
+        self.data.push_back(new_card);
+    }
+    fn add_card_to_top(&mut self, new_card: T) {
+        self.data.push_front(new_card);
     }
 }
 
@@ -103,6 +115,21 @@ mod tests {
         }
 
         assert!(cards.draw().is_none());
+    }
+
+    #[test]
+    fn test_flashcards_add_card_to_top() {
+        let mut cards = create_test_cards();
+
+        let card = cards.draw().unwrap();
+
+        let card1_text = card.get_front();
+
+        cards.add_card_to_top(card);
+
+        let card_2 = cards.draw().unwrap();
+
+        assert_eq!(card1_text, card_2.get_front());
     }
 
     #[test]

@@ -36,9 +36,9 @@ frint_3,back_3,,
 ";
         let mut result = Csv::load(data.as_bytes()).unwrap();
 
-        let card_3: Card = result.draw().unwrap();
-        let card_2: Card = result.draw().unwrap();
         let card_1: Card = result.draw().unwrap();
+        let card_2: Card = result.draw().unwrap();
+        let card_3: Card = result.draw().unwrap();
 
         assert_eq!(card_3.get_hint(), "No Hint Found");
         assert_eq!(card_2.get_front(), "front_2");
