@@ -40,8 +40,8 @@ frint_3,back_3,,
         let card_2: Card = result.draw().unwrap();
         let card_3: Card = result.draw().unwrap();
 
-        assert_eq!(card_3.get_hint(), "No Hint Found");
-        assert_eq!(card_2.get_front(), "front_2");
-        assert_eq!(card_1.get_hint(), "hint_1");
+        assert_eq!(card_3.get_hint(), None);
+        assert_eq!(card_2.get_front(), "front_2".to_string());
+        assert_eq!(card_1.get_hint(), Some("hint_1".to_string()));
     }
 }

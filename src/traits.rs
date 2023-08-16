@@ -6,7 +6,7 @@ use crate::FlashCardState;
 pub trait FlashCard<'de>: serde::Deserialize<'de> + Display {
     fn get_front(&self) -> String;
     fn get_back(&self) -> String;
-    fn get_hint(&self) -> String;
+    fn get_hint(&self) -> Option<String>;
 }
 
 pub trait FlipFlashCard: for<'de> FlashCard<'de> {

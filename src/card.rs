@@ -29,7 +29,14 @@ impl Display for Card {
         match self.state {
             FlashCardState::Front => write!(f, "{}", self.get_front()),
             FlashCardState::Back => write!(f, "{}", self.get_back()),
-            FlashCardState::Hint => write!(f, "{}", self.get_hint()),
+            FlashCardState::Hint => {
+                let result = match self.get_hint() {
+                    Some(hint) => hint,
+                    None => "No Hint Found".to_string(),
+                };
+
+                write!(f, "{}", result)
+            }
         }
     }
 }
@@ -41,12 +48,9 @@ impl FlashCard<'_> for Card {
     fn get_back(&self) -> String {
         self.back.to_string()
     }
-    fn get_hint(&self) -> String {
-        //TODO: return an option
-        match &self.hint {
-            Some(hint) => hint.to_string(),
-            None => "No Hint Found".to_string(),
-        }
+
+    fn get_hint(&self) -> Option<String> {
+        self.hint.clone()
     }
 }
 
@@ -84,7 +88,7 @@ mod tests {
 
         assert_eq!(card.get_front(), front);
         assert_eq!(card.get_back(), back);
-        assert_eq!(card.get_hint(), hint);
+        assert_eq!(card.get_hint(), Some(hint));
         assert_eq!(card.get_state(), &FlashCardState::Front);
     }
 
