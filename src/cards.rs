@@ -74,6 +74,11 @@ where
     fn add_card_to_top(&mut self, new_card: T) {
         self.data.push_front(new_card);
     }
+    fn add_deck(&mut self,mut  deck: Box<dyn FlashCards<T>>) {
+        while deck.deck_size() > 0 {
+            self.add_card(deck.draw().unwrap());
+        }
+    }
 }
 
 impl<U> FromIterator<U> for Cards<U>
@@ -104,6 +109,16 @@ mod tests {
                 )
             })
             .collect()
+    }
+
+    #[test]
+    fn test_flashcards_add_deck(){
+        let mut cards_1 = create_test_cards();
+        let cards_2 = create_test_cards();
+
+        cards_1.add_deck(Box::new(cards_2));
+
+        assert_eq!(cards_1.deck_size(), 20);
     }
 
     #[test]

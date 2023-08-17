@@ -24,6 +24,7 @@ where
     fn add_card(&mut self, new_card: T);
     fn add_card_to_top(&mut self, new_card: T);
     fn deck_size(&self) -> usize;
+    fn add_deck(&mut self, deck: Box<dyn FlashCards<T>>);
 }
 
 pub trait Loader<T: for<'de> FlashCard<'de>> {
