@@ -1,5 +1,6 @@
 use std::fmt::Display;
 use std::io::Error;
+use std::rc::Weak;
 
 use crate::FlashCardState;
 
@@ -29,4 +30,13 @@ where
 
 pub trait Loader<T: for<'de> FlashCard<'de>> {
     fn load(reader: impl std::io::Read) -> Result<Box<dyn FlashCards<T>>, Error>;
+}
+
+pub trait FlashCardsManager<T: for<'de> FlashCard<'de>> {
+    fn next_card(&mut self) -> Option<Weak<T>>;
+    fn previous_card(&mut self) -> Option<Weak<T>>;
+    fn shuffle(&mut self);
+    fn add_previous_cards_to_deck(&mut self);
+    fn num_of_cards_in_deck(&self) -> usize;
+    fn num_of_cards_seen(&self) -> usize;
 }

@@ -1,6 +1,6 @@
 use std::io::Error;
 
-use crate::{Loader, FlashCard, FlashCards, Cards};
+use crate::{Cards, FlashCard, FlashCards, Loader};
 
 pub struct Csv {}
 

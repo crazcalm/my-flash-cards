@@ -5,5 +5,3 @@ pub enum FlashCardState {
     Back,
     Hint,
 }
-
-

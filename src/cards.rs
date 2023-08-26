@@ -74,7 +74,7 @@ where
     fn add_card_to_top(&mut self, new_card: T) {
         self.data.push_front(new_card);
     }
-    fn add_deck(&mut self,mut  deck: Box<dyn FlashCards<T>>) {
+    fn add_deck(&mut self, mut deck: Box<dyn FlashCards<T>>) {
         while deck.deck_size() > 0 {
             self.add_card(deck.draw().unwrap());
         }
@@ -112,7 +112,7 @@ mod tests {
     }
 
     #[test]
-    fn test_flashcards_add_deck(){
+    fn test_flashcards_add_deck() {
         let mut cards_1 = create_test_cards();
         let cards_2 = create_test_cards();
 
