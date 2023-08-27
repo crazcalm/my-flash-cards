@@ -9,4 +9,5 @@ pub use card::Card;
 pub use cards::Cards;
 pub use enums::FlashCardState;
 pub use loader::Csv;
+pub use manager::CardsManager;
 pub use traits::{FlashCard, FlashCards, FlipFlashCard, Loader};

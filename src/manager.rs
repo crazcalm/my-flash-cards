@@ -1,27 +1,29 @@
+use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::{Rc, Weak};
 
 use rand::{thread_rng, Rng};
 
-use crate::traits::{FlashCard, FlashCards, FlashCardsManager};
+use crate::enums::FlashCardState;
+use crate::traits::{FlashCard, FlashCards, FlashCardsManager, FlipFlashCard};
 
 pub struct CardsManager<T>
 where
     T: for<'de> FlashCard<'de>,
 {
-    unseen_cards: VecDeque<Rc<T>>,
-    seen_cards: VecDeque<Rc<T>>,
+    unseen_cards: VecDeque<Rc<RefCell<T>>>,
+    seen_cards: VecDeque<Rc<RefCell<T>>>,
 }
 
 impl<T> CardsManager<T>
 where
-    T: for<'de> FlashCard<'de>,
+    T: for<'de> FlashCard<'de> + FlipFlashCard,
 {
     pub fn create_from_deck(mut deck: impl FlashCards<T>) -> Self {
         let mut unseen_cards = VecDeque::new();
         let mut card = deck.draw();
         while card.is_some() {
-            unseen_cards.push_back(Rc::new(card.unwrap()));
+            unseen_cards.push_back(Rc::new(RefCell::new(card.unwrap())));
             card = deck.draw();
         }
         Self {
@@ -33,9 +35,9 @@ where
 
 impl<T> FlashCardsManager<T> for CardsManager<T>
 where
-    T: for<'de> FlashCard<'de>,
+    T: for<'de> FlashCard<'de> + FlipFlashCard,
 {
-    fn next_card(&mut self) -> Option<Weak<T>> {
+    fn next_card(&mut self) -> Option<Weak<RefCell<T>>> {
         match self.unseen_cards.pop_front() {
             Some(card) => {
                 let card_weak_ref = Rc::downgrade(&card);
@@ -47,7 +49,7 @@ where
         }
     }
 
-    fn previous_card(&mut self) -> Option<Weak<T>> {
+    fn previous_card(&mut self) -> Option<Weak<RefCell<T>>> {
         match self.seen_cards.pop_front() {
             Some(card) => {
                 let card_weak_ref = Rc::downgrade(&card);
@@ -72,7 +74,7 @@ where
     }
 
     fn add_previous_cards_to_deck(&mut self) {
-        while !self.seen_cards.is_empty() {
+        for _ in 0..self.num_of_cards_seen() {
             self.unseen_cards
                 .push_front(self.seen_cards.pop_front().unwrap());
         }
@@ -84,6 +86,59 @@ where
 
     fn num_of_cards_in_deck(&self) -> usize {
         self.unseen_cards.len()
+    }
+
+    fn current_card(&mut self) -> Option<Weak<RefCell<T>>> {
+        match self.seen_cards.pop_front() {
+            None => None,
+            Some(card) => {
+                let card_weak_ref = Rc::downgrade(&card);
+                self.seen_cards.push_front(card);
+
+                Some(card_weak_ref)
+            }
+        }
+    }
+
+    fn flip_current_card(&mut self) {
+        match self.seen_cards.pop_front() {
+            None => {}
+            Some(card) => {
+                let mut card_instance = card.borrow_mut();
+                card_instance.flip();
+                drop(card_instance);
+
+                self.seen_cards.push_front(card);
+            }
+        }
+    }
+
+    fn try_to_flip_current_card_to_hint(&mut self) {
+        match self.seen_cards.pop_front() {
+            None => {}
+            Some(card) => {
+                let mut card_instance = card.borrow_mut();
+                if card_instance.get_hint().is_some() {
+                    card_instance.set_state(FlashCardState::Hint)
+                }
+                drop(card_instance);
+
+                self.seen_cards.push_front(card);
+            }
+        }
+    }
+
+    fn reset_current_card_state(&mut self) {
+        match self.seen_cards.pop_front() {
+            None => {}
+            Some(card) => {
+                let mut card_instance = card.borrow_mut();
+                card_instance.set_state(FlashCardState::Front);
+                drop(card_instance);
+
+                self.seen_cards.push_front(card);
+            }
+        }
     }
 }
 
@@ -107,6 +162,57 @@ mod tests {
     }
 
     #[test]
+    fn test_reset_card_to_front() {
+        let mut card_manager = create_test_manager();
+
+        let _ = card_manager.next_card().unwrap();
+        card_manager.flip_current_card();
+        let card_ref = card_manager.current_card().unwrap();
+
+        {
+            let binding = card_ref.upgrade().unwrap();
+            let card = binding.borrow();
+            assert_eq!(card.get_state(), &FlashCardState::Back);
+        }
+
+        let _ = card_manager.reset_current_card_state();
+        let binding = card_ref.upgrade().unwrap();
+        let card = binding.borrow();
+        assert_eq!(card.get_state(), &FlashCardState::Front);
+    }
+
+    #[test]
+    fn test_get_current_card() {
+        let mut card_manager = create_test_manager();
+
+        let next_card = card_manager.next_card().unwrap();
+        let current_card = card_manager.current_card().unwrap();
+
+        assert!(next_card.ptr_eq(&current_card));
+    }
+
+    #[test]
+    fn test_try_to_flip_current_card_to_hint() {
+        let mut card_manager = create_test_manager();
+
+        let _ = card_manager.next_card();
+        card_manager.try_to_flip_current_card_to_hint();
+        let binding = card_manager.current_card().unwrap().upgrade().unwrap();
+        let card = binding.borrow();
+        assert_eq!(card.get_state(), &FlashCardState::Hint);
+    }
+    #[test]
+    fn test_flip_current_card() {
+        let mut card_manager = create_test_manager();
+
+        let _ = card_manager.next_card();
+        card_manager.flip_current_card();
+        let binding = card_manager.current_card().unwrap().upgrade().unwrap();
+        let card = binding.borrow();
+        assert_eq!(card.get_state(), &FlashCardState::Back);
+    }
+
+    #[test]
     fn test_previous_card() {
         let mut card_manager = create_test_manager();
 
@@ -118,8 +224,8 @@ mod tests {
 
         assert!(previous_card.ptr_eq(&next_card));
         assert_eq!(
-            previous_card.upgrade().unwrap().get_front(),
-            next_card.upgrade().unwrap().get_front()
+            previous_card.upgrade().unwrap().borrow().get_front(),
+            next_card.upgrade().unwrap().borrow().get_front()
         );
     }
 
@@ -150,11 +256,6 @@ mod tests {
         for _ in 0..5 {
             let expect_card = seen_cards.pop_front().unwrap();
             let card = card_manager.next_card().unwrap();
-
-            let expect = expect_card.clone().upgrade().unwrap();
-            let cc = card.clone().upgrade().unwrap();
-
-            println!("{} -- {}", expect, cc);
 
             assert!(expect_card.ptr_eq(&card));
         }
