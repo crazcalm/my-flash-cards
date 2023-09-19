@@ -25,6 +25,15 @@ where
     }
 }
 
+impl<T> Default for Cards<T>
+where
+    T: for<'de> FlashCard<'de>,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> Display for Cards<T>
 where
     T: for<'de> FlashCard<'de>,
